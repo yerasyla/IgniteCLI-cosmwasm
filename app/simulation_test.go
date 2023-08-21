@@ -36,6 +36,9 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/stretchr/testify/require"
 
+	wasmkeeper "github.com/CosmWasm/wasmd/x/wasm/keeper"
+	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
+
 	"planet/app"
 )
 
@@ -92,11 +95,13 @@ func BenchmarkSimulation(b *testing.B) {
 		db,
 		nil,
 		true,
+		wasmtypes.EnableAllProposals,
 		map[int64]bool{},
 		app.DefaultNodeHome,
 		0,
 		app.MakeEncodingConfig(),
 		appOptions,
+		[]wasmkeeper.Option{},
 		baseapp.SetChainID(config.ChainID),
 	)
 	require.Equal(b, app.Name, bApp.Name())
@@ -168,11 +173,13 @@ func TestAppStateDeterminism(t *testing.T) {
 				db,
 				nil,
 				true,
+				wasmtypes.EnableAllProposals,
 				map[int64]bool{},
 				app.DefaultNodeHome,
 				simcli.FlagPeriodValue,
 				app.MakeEncodingConfig(),
 				appOptions,
+				[]wasmkeeper.Option{},
 				fauxMerkleModeOpt,
 				baseapp.SetChainID(chainID),
 			)
@@ -246,11 +253,13 @@ func TestAppImportExport(t *testing.T) {
 		db,
 		nil,
 		true,
+		wasmtypes.EnableAllProposals,
 		map[int64]bool{},
 		app.DefaultNodeHome,
 		0,
 		app.MakeEncodingConfig(),
 		appOptions,
+		[]wasmkeeper.Option{},
 		baseapp.SetChainID(config.ChainID),
 	)
 	require.Equal(t, app.Name, bApp.Name())
@@ -307,11 +316,13 @@ func TestAppImportExport(t *testing.T) {
 		newDB,
 		nil,
 		true,
+		wasmtypes.EnableAllProposals,
 		map[int64]bool{},
 		app.DefaultNodeHome,
 		0,
 		app.MakeEncodingConfig(),
 		appOptions,
+		[]wasmkeeper.Option{},
 		baseapp.SetChainID(config.ChainID),
 	)
 	require.Equal(t, app.Name, bApp.Name())
@@ -400,11 +411,13 @@ func TestAppSimulationAfterImport(t *testing.T) {
 		db,
 		nil,
 		true,
+		wasmtypes.EnableAllProposals,
 		map[int64]bool{},
 		app.DefaultNodeHome,
 		0,
 		app.MakeEncodingConfig(),
 		appOptions,
+		[]wasmkeeper.Option{},
 		fauxMerkleModeOpt,
 		baseapp.SetChainID(config.ChainID),
 	)
@@ -467,11 +480,13 @@ func TestAppSimulationAfterImport(t *testing.T) {
 		newDB,
 		nil,
 		true,
+		wasmtypes.EnableAllProposals,
 		map[int64]bool{},
 		app.DefaultNodeHome,
 		0,
 		app.MakeEncodingConfig(),
 		appOptions,
+		[]wasmkeeper.Option{},
 		fauxMerkleModeOpt,
 		baseapp.SetChainID(config.ChainID),
 	)

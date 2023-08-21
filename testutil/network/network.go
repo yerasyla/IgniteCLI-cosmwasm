@@ -18,6 +18,9 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/stretchr/testify/require"
 
+	wasmkeeper "github.com/CosmWasm/wasmd/x/wasm/keeper"
+	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
+
 	"planet/app"
 )
 
@@ -65,11 +68,13 @@ func DefaultConfig() network.Config {
 				tmdb.NewMemDB(),
 				nil,
 				true,
+				wasmtypes.EnableAllProposals,
 				map[int64]bool{},
 				val.GetCtx().Config.RootDir,
 				0,
 				encoding,
 				simtestutil.EmptyAppOptions{},
+				[]wasmkeeper.Option{},
 				baseapp.SetPruning(pruningtypes.NewPruningOptionsFromString(val.GetAppConfig().Pruning)),
 				baseapp.SetMinGasPrices(val.GetAppConfig().MinGasPrices),
 				baseapp.SetChainID(chainID),
