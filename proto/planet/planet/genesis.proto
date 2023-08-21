@@ -1,0 +1,12 @@
+syntax = "proto3";
+package planet.planet;
+
+import "gogoproto/gogo.proto";
+import "planet/planet/params.proto";
+
+option go_package = "planet/x/planet/types";
+
+// GenesisState defines the planet module's genesis state.
+message GenesisState {
+  Params params = 1 [(gogoproto.nullable) = false];
+}
