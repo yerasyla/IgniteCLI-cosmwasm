@@ -1,47 +1,134 @@
-# planet
-**planet** is a blockchain built using Cosmos SDK and Tendermint and created with [Ignite CLI](https://ignite.com/cli).
+# CosmWasm support for Ignite CLI
+
+**This repo provides** comprehensive guide for integrating the CosmWasm module to chains scaffolded with [Ignite CLI](https://ignite.com/cli), enabling you to explore and test smart contract functionalities.
 
 ## Get started
+To start your own CosmWasm chain, you have to scaffold a chain with [Ignite CLI](https://docs.ignite.com).
+
+1. Install Ignite CLI:
+```
+$ curl https://get.ignite.com/cli! | bash
+```
+2. Scaffold a chain 
+```
+$ ignite scaffold chain planet
+$ cd planet
+```
+3. Import wasm module
+```
+$ go get github.com/CosmWasm/wasmd/x/wasm@v0.41.0
+```
+
+4. Integrate wasm module
+
+Follow the changes in the commit:
+https://github.com/yerasyla/IgniteCLI-cosmwasm/commit/f698ff35c544428f75d747787dcb4447a82d6752
+
+
+Instructions:
+
+a. Create an `app/ante.go` and `app/wasm.go` files and copy the content
+
+b. Modify `app/app.go` file
+
+c. Modify `app/simulation_test.go`, `cmd/planetd/cmd/root.go`, and `testutil/network/network.go`
+
+You should have working CosmWasm chain at that point
+
+5. Launch your chain
 
 ```
-ignite chain serve
+$ ignite chain serve
 ```
-
 `serve` command installs dependencies, builds, initializes, and starts your blockchain in development.
 
-### Configure
 
-Your blockchain in development can be configured with `config.yml`. To learn more, see the [Ignite CLI docs](https://docs.ignite.com).
+## Testing Smart-Contracts
 
-### Web Frontend
+Testing CosmWasm smart-contract capabilities in your chain, can be performed by following these steps:
 
-Ignite CLI has scaffolded a Vue.js-based web app in the `vue` directory. Run the following commands to install dependencies and start the app:
+0. Prerequisites: install [rust](https://www.rust-lang.org/tools/install) and [docker](https://www.docker.com/) (for smart-contact optimization)
 
+1. Launch chain locally:
 ```
-cd vue
-npm install
-npm run serve
+$ ignite chain serve
 ```
 
-The frontend app is built using the `@starport/vue` and `@starport/vuex` packages. For details, see the [monorepo for Ignite front-end development](https://github.com/ignite/web).
-
-## Release
-To release a new version of your blockchain, create and push a new tag with `v` prefix. A new draft release with the configured targets will be created.
-
+2. Prepare cosmwasm smart-contract for deployment
 ```
-git tag v0.1
-git push origin v0.1
+$ git clone https://github.com/CosmWasm/cw-examples
+$ cd cw-examples
+$ cd contracts/nameservice
+$ cargo wasm
 ```
 
-After a draft release is created, make your final changes from the release page and publish it.
+Optimize contract to reduce gas
+```
+$ docker run --rm -v "$(pwd)":/code \
+  --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target \
+  --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
+  cosmwasm/rust-optimizer:0.12.12
+```
 
-### Install
-To install the latest version of your blockchain node's binary, execute the following command on your machine:
+For ARM64 machines:
+```
+$ docker run --rm -v "$(pwd)":/code \
+  --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target \
+  --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
+  cosmwasm/rust-optimizer-arm64:0.12.12
+```
+
+3. Deploy smart-contract to your chain
+```
+$ planetd tx wasm store artifacts/cw_nameservice.wasm --from alice --gas=10000000 
+```
+
+4. Check your smart-contract on chain
+```
+$ planetd query wasm list-code
+code_infos:
+- code_id: "1"
+  creator: cosmos1a4w3vwxa8zhy57nyy9kw7zhdasr4ue4wld0zpn
+  data_hash: DF3C9BC1341322810523AABCA28CC3FCDCA021C85061743967CE3D20F5580093
+pagination: {}
+
+# download wasm and diff with origin
+$ CODE_ID=$(planetd query wasm list-code --output json | jq -r '.code_infos[0].code_id')
+$ planetd query wasm code $CODE_ID download.wasm
+$ diff artifacts/cw_nameservice.wasm download.wasm
+```
+
+5. Instantiate smart-contract, in CosmWasm deployment and instantiation are 2 different steps
 
 ```
-curl https://get.ignite.com/username/planet@latest! | sudo bash
+$ INIT='{"purchase_price":{"amount":"100","denom":"stake"},"transfer_price":{"amount":"999","denom":"stake"}}'
+$ planetd tx wasm instantiate 1 "$INIT" --from alice --chain-id "planet" --label "awesome name service" --no-admin
+
+$ CONTRACT=$(planetd query wasm list-contract-by-code $CODE_ID --output json | jq -r '.contracts[-1]')
+# check contract state (you should get contract address)
+$ planetd query wasm contract $CONTRACT
+address: cosmos14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s0phg4d
+contract_info:
+  code_id: "1"
+  creator: cosmos1a4w3vwxa8zhy57nyy9kw7zhdasr4ue4wld0zpn
+  label: awesome name service
 ```
-`username/planet` should match the `username` and `repo_name` of the Github repository to which the source code was pushed. Learn more about [the install process](https://github.com/allinbits/starport-installer).
+
+6. Interact with smart-contract
+```
+# purchase name
+$ planetd tx wasm execute $CONTRACT '{"register":{"name":"test"}}' --amount 100stake --from alice $TXFLAG -y
+
+# query registered name (you should see your address as owner of the name)
+$ NAME_QUERY='{"resolve_record": {"name": "test"}}'
+$ planetd query wasm contract-state smart $CONTRACT "$NAME_QUERY" --output json
+```
+
+## Compatibility
+
+| Ignite CLI  | Cosmos SDK  | IBC       | wasmd                                                         |
+|-------------|-------------|-----------|---------------------------------------------------------------|
+| v0.27.1     | v0.47.4     | v7.2.0    | v0.41.0                                                       |
 
 ## Learn more
 
@@ -50,3 +137,6 @@ curl https://get.ignite.com/username/planet@latest! | sudo bash
 - [Ignite CLI docs](https://docs.ignite.com)
 - [Cosmos SDK docs](https://docs.cosmos.network)
 - [Developer Chat](https://discord.gg/ignite)
+- [CosmWasm](https://cosmwasm.com/)
+- [Wasm module](https://github.com/CosmWasm/wasmd)
+- [CosmWasm Smart Contract Tutorial](https://medium.com/haderech-dev/smart-contract-tutorial-3-cosmwasm-805860c91a88)
